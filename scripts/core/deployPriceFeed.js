@@ -4,6 +4,7 @@ const { toUsd } = require("../../test/shared/units")
 
 const network = (process.env.HARDHAT_NETWORK || 'goerli');
 const tokens = require('./tokens')[network];
+const deployedAddress = require('../deployedAddresses')[network];
 
 const {
   ARBITRUM_URL,
@@ -87,6 +88,54 @@ async function getAvaxValues(signer) {
   }
 }
 
+async function getMumbaiValues() {
+  // const provider = new ethers.providers.JsonRpcProvider(AVAX_URL)
+  // const capKeeperWallet = new ethers.Wallet(AVAX_CAP_KEEPER_KEY).connect(provider)
+  const capKeeperWallet = "0x2cA62Cf3F7D24A31D7125962b55809A61e05560a"
+
+  const { btc, dai, eth } = tokens
+  const tokenArr = [btc, dai, eth]
+  const fastPriceTokens = [btc, dai, eth]
+
+  const {  PRICE_FEED_TIME_LOCK, TOKEN_MANAGER, POSITION_ROUTER, VAULT_PRICE_FEED, POSITION_UTILS, FAST_PRICE_EVENT } = deployedAddress;
+
+  const priceFeedTimelock = { address: PRICE_FEED_TIME_LOCK }
+
+  const updater1 = { address: "0x3E5Cc534379e3887f42BB4B58d138DAC49d85324" } // Account 4
+  const updater2 = { address: "0x484020c219a945aCb104184b026D58651dbF833a" } // Account 5
+  const keeper1 = { address: "0x57755Cc5A51dA9A70fe87A8a1e13f5d93082b529" } // Account 6
+  const keeper2 = { address: "0x4cdB4ACF8f801fa6B5D65dF7f59B641DBD143739" } // Account 7
+  const updaters = [updater1.address, updater2.address, keeper1.address, keeper2.address]
+
+  const tokenManager = { address: TOKEN_MANAGER }
+
+  const positionRouter1 = await contractAt("PositionRouter", POSITION_ROUTER, null, {
+    libraries: {
+      PositionUtils: POSITION_UTILS
+    }
+  })
+  const positionRouter2 = await contractAt("PositionRouter", POSITION_ROUTER, null, {
+    libraries: {
+      PositionUtils: POSITION_UTILS
+    }
+  })
+
+  // const fastPriceEvents = await deployContract("FastPriceEvents", [])
+  const fastPriceEvents = await contractAt("FastPriceEvents", FAST_PRICE_EVENT)
+
+  return {
+    fastPriceTokens,
+    fastPriceEvents,
+    tokenManager,
+    positionRouter1,
+    positionRouter2,
+    tokenArr,
+    updaters,
+    priceFeedTimelock,
+    VAULT_PRICE_FEED
+  }
+}
+
 async function getValues(signer) {
   if (network === "arbitrum") {
     return getArbValues(signer)
@@ -95,10 +144,14 @@ async function getValues(signer) {
   if (network === "avax") {
     return getAvaxValues(signer)
   }
+
+  if (network === "mumbai") {
+    return getMumbaiValues()
+  }
 }
 
 async function main() {
-  const signer = await getFrameSigner()
+  // const signer = await getFrameSigner()
   const deployer = { address: "0x5F799f365Fa8A2B60ac0429C48B153cA5a6f0Cf8" }
 
   const {
@@ -110,19 +163,20 @@ async function main() {
     chainlinkFlags,
     tokenArr,
     updaters,
-    priceFeedTimelock
-  } = await getValues(signer)
+    priceFeedTimelock,
+    VAULT_PRICE_FEED
+  } = await getValues()
 
   const signers = [
-    "0x82429089e7c86B7047b793A9E7E7311C93d2b7a6", // coinflipcanada
-    "0x1D6d107F5960A66f293Ac07EDd08c1ffE79B548a", // G Account 1
-    "0xD7941C4Ca57a511F21853Bbc7FBF8149d5eCb398", // G Account 2
-    "0xfb481D70f8d987c1AE3ADc90B7046e39eb6Ad64B", // kr
-    "0x99Aa3D1b3259039E8cB4f0B33d0Cfd736e1Bf49E", // quat
-    "0x6091646D0354b03DD1e9697D33A7341d8C93a6F5", // xhiroz
-    "0x45e48668F090a3eD1C7961421c60Df4E66f693BD", // Dovey
-    "0x881690382102106b00a99E3dB86056D0fC71eee6", // Han Wen
-    "0x2e5d207a4c0f7e7c52f6622dcc6eb44bc0fe1a13" // Krunal Amin
+    "0x3E5Cc534379e3887f42BB4B58d138DAC49d85324", // Account 4
+    "0x484020c219a945aCb104184b026D58651dbF833a", // Account 5
+    "0x57755Cc5A51dA9A70fe87A8a1e13f5d93082b529", // Account 6
+    "0x4cdB4ACF8f801fa6B5D65dF7f59B641DBD143739", // Account 7
+    "0x9d08f124583DaF11E8AAe84fAbB492eb48CFEd53", // Account 8
+    "0x45A16D04E4771c713844f9AF95Bd1aF6ee845bD1", // Account 9
+    "0xEd1973F50129f3735Ffb6650c71474ae868ce6D8", // Account 10
+    "0xa8b7EB755181131e68AdDB47837B5D6dE1A8E041", // Account 11
+    "0x04a8E7D5CE11361E06a777577E6BCBA58b238Ad4" // Account 12
   ]
 
   if (fastPriceTokens.find(t => !t.fastPricePrecision)) {
@@ -133,49 +187,59 @@ async function main() {
     throw new Error("Invalid price maxCumulativeDeltaDiff")
   }
 
-  const secondaryPriceFeed = await deployContract("FastPriceFeed", [
-    5 * 60, // _priceDuration
-    60 * 60, // _maxPriceUpdateDelay
-    1, // _minBlockInterval
-    250, // _maxDeviationBasisPoints
-    fastPriceEvents.address, // _fastPriceEvents
-    deployer.address // _tokenManager
-  ])
+  // const secondaryPriceFeed = await deployContract("FastPriceFeed", [
+  //   5 * 60, // _priceDuration
+  //   60 * 60, // _maxPriceUpdateDelay
+  //   1, // _minBlockInterval
+  //   250, // _maxDeviationBasisPoints
+  //   fastPriceEvents.address, // _fastPriceEvents
+  //   deployer.address // _tokenManager
+  // ], "SecondaryPriceFeed")
+  const SecondaryPriceFeed_address = "0x22E38bE1016378CDcb0dEad91dc37C84C26152D6";
+  const secondaryPriceFeed = await contractAt("FastPriceFeed", SecondaryPriceFeed_address);
 
-  const vaultPriceFeed = await deployContract("VaultPriceFeed", [])
+  let vaultPriceFeed
 
-  await sendTxn(vaultPriceFeed.setMaxStrictPriceDeviation(expandDecimals(1, 28)), "vaultPriceFeed.setMaxStrictPriceDeviation") // 0.01 USD
-  await sendTxn(vaultPriceFeed.setPriceSampleSpace(1), "vaultPriceFeed.setPriceSampleSpace")
-  await sendTxn(vaultPriceFeed.setSecondaryPriceFeed(secondaryPriceFeed.address), "vaultPriceFeed.setSecondaryPriceFeed")
-  await sendTxn(vaultPriceFeed.setIsAmmEnabled(false), "vaultPriceFeed.setIsAmmEnabled")
-
-  if (chainlinkFlags) {
-    await sendTxn(vaultPriceFeed.setChainlinkFlags(chainlinkFlags.address), "vaultPriceFeed.setChainlinkFlags")
+  if(VAULT_PRICE_FEED) {
+    vaultPriceFeed = await contractAt("VaultPriceFeed", VAULT_PRICE_FEED)
+  } else {
+    vaultPriceFeed = await deployContract("VaultPriceFeed", [], "VaultPriceFeed")
   }
 
-  for (const [i, tokenItem] of tokenArr.entries()) {
-    if (tokenItem.spreadBasisPoints === undefined) { continue }
-    await sendTxn(vaultPriceFeed.setSpreadBasisPoints(
-      tokenItem.address, // _token
-      tokenItem.spreadBasisPoints // _spreadBasisPoints
-    ), `vaultPriceFeed.setSpreadBasisPoints(${tokenItem.name}) ${tokenItem.spreadBasisPoints}`)
-  }
+  // await sendTxn(vaultPriceFeed.setMaxStrictPriceDeviation(expandDecimals(1, 28)), "vaultPriceFeed.setMaxStrictPriceDeviation") // 0.01 USD
+  // await sendTxn(vaultPriceFeed.setPriceSampleSpace(1), "vaultPriceFeed.setPriceSampleSpace")
+  // await sendTxn(vaultPriceFeed.setSecondaryPriceFeed(secondaryPriceFeed.address), "vaultPriceFeed.setSecondaryPriceFeed")
+  // await sendTxn(vaultPriceFeed.setIsAmmEnabled(false), "vaultPriceFeed.setIsAmmEnabled")
 
-  for (const token of tokenArr) {
-    await sendTxn(vaultPriceFeed.setTokenConfig(
-      token.address, // _token
-      token.priceFeed, // _priceFeed
-      token.priceDecimals, // _priceDecimals
-      token.isStrictStable // _isStrictStable
-    ), `vaultPriceFeed.setTokenConfig(${token.name}) ${token.address} ${token.priceFeed}`)
-  }
+  // if (chainlinkFlags) {
+  //   await sendTxn(vaultPriceFeed.setChainlinkFlags(chainlinkFlags.address), "vaultPriceFeed.setChainlinkFlags")
+  // }
 
-  await sendTxn(secondaryPriceFeed.initialize(1, signers, updaters), "secondaryPriceFeed.initialize")
-  await sendTxn(secondaryPriceFeed.setTokens(fastPriceTokens.map(t => t.address), fastPriceTokens.map(t => t.fastPricePrecision)), "secondaryPriceFeed.setTokens")
-  await sendTxn(secondaryPriceFeed.setVaultPriceFeed(vaultPriceFeed.address), "secondaryPriceFeed.setVaultPriceFeed")
-  await sendTxn(secondaryPriceFeed.setMaxTimeDeviation(60 * 60), "secondaryPriceFeed.setMaxTimeDeviation")
-  await sendTxn(secondaryPriceFeed.setSpreadBasisPointsIfInactive(50), "secondaryPriceFeed.setSpreadBasisPointsIfInactive")
-  await sendTxn(secondaryPriceFeed.setSpreadBasisPointsIfChainError(500), "secondaryPriceFeed.setSpreadBasisPointsIfChainError")
+  // for (const [i, tokenItem] of tokenArr.entries()) {
+  //   if (tokenItem.spreadBasisPoints === undefined) { continue }
+  //   await sendTxn(vaultPriceFeed.setSpreadBasisPoints(
+  //     tokenItem.address, // _token
+  //     tokenItem.spreadBasisPoints // _spreadBasisPoints
+  //   ), `vaultPriceFeed.setSpreadBasisPoints(${tokenItem.name}) ${tokenItem.spreadBasisPoints}`)
+  // }
+
+  // for (const token of tokenArr) {
+  //   await sendTxn(vaultPriceFeed.setTokenConfig(
+  //     token.address, // _token
+  //     token.priceFeed, // _priceFeed
+  //     token.priceDecimals, // _priceDecimals
+  //     token.isStrictStable // _isStrictStable
+  //   ), `vaultPriceFeed.setTokenConfig(${token.name}) ${token.address} ${token.priceFeed}`)
+  // }
+
+  // await sendTxn(secondaryPriceFeed.initialize(1, signers, updaters), "secondaryPriceFeed.initialize")
+  // await sendTxn(secondaryPriceFeed.setTokens(fastPriceTokens.map(t => t.address), fastPriceTokens.map(t => t.fastPricePrecision)), "secondaryPriceFeed.setTokens")
+  // await sendTxn(secondaryPriceFeed.setVaultPriceFeed(vaultPriceFeed.address), "secondaryPriceFeed.setVaultPriceFeed")
+  // await sendTxn(secondaryPriceFeed.setMaxTimeDeviation(60 * 60), "secondaryPriceFeed.setMaxTimeDeviation")
+  // await sendTxn(secondaryPriceFeed.setSpreadBasisPointsIfInactive(50), "secondaryPriceFeed.setSpreadBasisPointsIfInactive")
+  // await sendTxn(secondaryPriceFeed.setSpreadBasisPointsIfChainError(500), "secondaryPriceFeed.setSpreadBasisPointsIfChainError")
+  ////// not done
+  console.log(fastPriceTokens.map(t => t.address), fastPriceTokens.map(t => t.maxCumulativeDeltaDiff));
   await sendTxn(secondaryPriceFeed.setMaxCumulativeDeltaDiffs(fastPriceTokens.map(t => t.address), fastPriceTokens.map(t => t.maxCumulativeDeltaDiff)), "secondaryPriceFeed.setMaxCumulativeDeltaDiffs")
   await sendTxn(secondaryPriceFeed.setPriceDataInterval(1 * 60), "secondaryPriceFeed.setPriceDataInterval")
 

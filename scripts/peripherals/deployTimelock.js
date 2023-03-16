@@ -2,6 +2,7 @@ const { deployContract, contractAt, sendTxn, getFrameSigner } = require("../shar
 const { expandDecimals } = require("../../test/shared/utilities")
 
 const network = (process.env.HARDHAT_NETWORK || 'goerli');
+const deployedAddress = require("../deployedAddresses")[network];
 
 async function getArbValues() {
   const vault = await contractAt("Vault", "0x489ee077994B6658eAfA855C308275EAd8097C4A")
@@ -29,6 +30,20 @@ async function getAvaxValues() {
   return { vault, tokenManager, glpManager, rewardRouter, positionRouter, positionManager, gmx }
 }
 
+async function getMumbaiValues() {
+  const { VAULT, TOKEN_MANAGER, GLP_MANAGER, GMX, REWARD_ROUTER_V2, POSITION_ROUTER, POSITION_MANAGER } = deployedAddress
+  const vault = await contractAt("Vault", VAULT)
+  const tokenManager = { address: TOKEN_MANAGER }
+  const glpManager = { address: GLP_MANAGER }
+  const rewardRouter = { address: REWARD_ROUTER_V2 }
+
+  const positionRouter = { address: POSITION_ROUTER }
+  const positionManager = { address: POSITION_MANAGER }
+  const gmx = { address: GMX }
+
+  return { vault, tokenManager, glpManager, rewardRouter, positionRouter, positionManager, gmx }
+}
+
 async function getValues() {
   if (network === "arbitrum") {
     return getArbValues()
@@ -37,12 +52,17 @@ async function getValues() {
   if (network === "avax") {
     return getAvaxValues()
   }
+
+  if (network === "mumbai") {
+    return getMumbaiValues()
+  }
 }
 
 async function main() {
-  const signer = await getFrameSigner()
+  // const signer = await getFrameSigner()
 
-  const admin = "0x49B373D422BdA4C6BfCdd5eC1E48A9a26fdA2F8b"
+  // mumbai
+  const admin = "0x2cA62Cf3F7D24A31D7125962b55809A61e05560a"
   const buffer = 24 * 60 * 60
   const maxTokenSupply = expandDecimals("13250000", 18)
 
@@ -61,41 +81,43 @@ async function main() {
     500 // maxMarginFeeBasisPoints 5%
   ], "Timelock")
 
-  const deployedTimelock = await contractAt("Timelock", timelock.address, signer)
+  ////////// from here: after positionManager, positionRouter
+  // const deployedTimelock = await contractAt("Timelock", timelock.address, signer)
 
-  await sendTxn(deployedTimelock.setShouldToggleIsLeverageEnabled(true), "deployedTimelock.setShouldToggleIsLeverageEnabled(true)")
-  await sendTxn(deployedTimelock.setContractHandler(positionRouter.address, true), "deployedTimelock.setContractHandler(positionRouter)")
-  await sendTxn(deployedTimelock.setContractHandler(positionManager.address, true), "deployedTimelock.setContractHandler(positionManager)")
+  // await sendTxn(deployedTimelock.setShouldToggleIsLeverageEnabled(true), "deployedTimelock.setShouldToggleIsLeverageEnabled(true)")
+  // await sendTxn(deployedTimelock.setContractHandler(positionRouter.address, true), "deployedTimelock.setContractHandler(positionRouter)")
+  // await sendTxn(deployedTimelock.setContractHandler(positionManager.address, true), "deployedTimelock.setContractHandler(positionManager)")
 
-  // // update gov of vault
-  // const vaultGov = await contractAt("Timelock", await vault.gov(), signer)
+  // // // update gov of vault
+  // // const vaultGov = await contractAt("Timelock", await vault.gov(), signer)
 
-  // await sendTxn(vaultGov.signalSetGov(vault.address, deployedTimelock.address), "vaultGov.signalSetGov")
-  // await sendTxn(deployedTimelock.signalSetGov(vault.address, vaultGov.address), "deployedTimelock.signalSetGov(vault)")
+  // // await sendTxn(vaultGov.signalSetGov(vault.address, deployedTimelock.address), "vaultGov.signalSetGov")
+  // // await sendTxn(deployedTimelock.signalSetGov(vault.address, vaultGov.address), "deployedTimelock.signalSetGov(vault)")
 
-  const handlers = [
-    "0x82429089e7c86B7047b793A9E7E7311C93d2b7a6", // coinflipcanada
-    "0xD7941C4Ca57a511F21853Bbc7FBF8149d5eCb398", // G
-    "0xfb481D70f8d987c1AE3ADc90B7046e39eb6Ad64B", // kr
-    "0x99Aa3D1b3259039E8cB4f0B33d0Cfd736e1Bf49E", // quat
-    "0x6091646D0354b03DD1e9697D33A7341d8C93a6F5" // xhiroz
-  ]
+  // const handlers = [
+  //   "0xaEC25A9e0D64b3CafEb256C2942d00013ad6437c", // Account 2
+  //   "0xf235710D1A70272a274DA1c3146F16302219C6d3", // Account 3
+  //   "0x3E5Cc534379e3887f42BB4B58d138DAC49d85324", // Account 4
+  //   "0x484020c219a945aCb104184b026D58651dbF833a", // Account 5
+  //   "0x57755Cc5A51dA9A70fe87A8a1e13f5d93082b529", // Account 6
+  // ]
 
-  for (let i = 0; i < handlers.length; i++) {
-    const handler = handlers[i]
-    await sendTxn(deployedTimelock.setContractHandler(handler, true), `deployedTimelock.setContractHandler(${handler})`)
-  }
+  // for (let i = 0; i < handlers.length; i++) {
+  //   const handler = handlers[i]
+  //   await sendTxn(deployedTimelock.setContractHandler(handler, true), `deployedTimelock.setContractHandler(${handler})`)
+  // }
 
-  const keepers = [
-    "0x5F799f365Fa8A2B60ac0429C48B153cA5a6f0Cf8" // X
-  ]
+  // const keepers = [
+  //   "0x4cdB4ACF8f801fa6B5D65dF7f59B641DBD143739" // Account 7
+  // ]
 
-  for (let i = 0; i < keepers.length; i++) {
-    const keeper = keepers[i]
-    await sendTxn(deployedTimelock.setKeeper(keeper, true), `deployedTimelock.setKeeper(${keeper})`)
-  }
+  // for (let i = 0; i < keepers.length; i++) {
+  //   const keeper = keepers[i]
+  //   await sendTxn(deployedTimelock.setKeeper(keeper, true), `deployedTimelock.setKeeper(${keeper})`)
+  // }
 
-  await sendTxn(deployedTimelock.signalApprove(gmx.address, admin, "1000000000000000000"), "deployedTimelock.signalApprove")
+  // await sendTxn(deployedTimelock.signalApprove(gmx.address, admin, "1000000000000000000"), "deployedTimelock.signalApprove")
+  ////////// to here
 }
 
 main()

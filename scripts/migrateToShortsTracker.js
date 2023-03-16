@@ -64,6 +64,20 @@ async function getGoerliValues() {
   }
 }
 
+async function getMumbaiValues() {
+  return {
+    serverHost: "https://polygon-mumbai.g.alchemy.com/v2/IWv_W2NS1D40ZSgluCpk1GId6wnrEx_K",
+    serverAdminApiKey: AVAX_SERVER_ADMIN_API_KEY,
+    vaultAddress: "0x9ab2de34a33fb459b538c43f251eb825645e8595",
+    shortsTrackerAddress: "0x9234252975484D75Fd05f3e4f7BdbEc61956D73a",
+    indexTokens: {
+      "0xB31f66AA3C1e785363F0875A1B74E27b85FD66c7": "WAVAX",
+      "0x50b7545627a5162F82A992c33b87aDc75187B218": "BTC",
+      "0x49D5c2BdFfac6CE2BFdB6640F4F80f226bc10bAB": "WETH"
+    },
+  }
+}
+
 async function getValues() {
   if (process.env.HARDHAT_NETWORK === "arbitrum") {
     return await getArbValues()
@@ -71,6 +85,8 @@ async function getValues() {
     return await getAvaxValues()
   } else if (process.env.HARDHAT_NETWORK === "goerli") {
     return await getGoerliValues()
+  } else if (process.env.HARDHAT_NETWORK === "mumbai") {
+    return await getMumbaiValues()
   }
   throw new Error("Unsupported network")
 }

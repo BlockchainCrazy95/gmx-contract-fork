@@ -98,6 +98,39 @@ module.exports = {
       decimals: 18,
     },
   },
+  mumbai: {
+    btc: {
+      address: "0x0d787a4a1548f673ed375445535a6c7A1EE56180",
+      decimals: 18,
+      priceFeed: "0x007A22900a3B98143368Bd5906f8E17e9867581b",
+      priceDecimals: 8,
+      isStrictStable: false,
+      fastPricePrecision: 1000,
+      maxCumulativeDeltaDiff: 0.1 * 10 * 1000 * 1000, // 10%
+    },
+    eth: {
+      address: "0xA6FA4fB5f76172d178d61B04b0ecd319C5d1C0aa",
+      decimals: 18,
+      priceFeed: "0x0715A7794a1dc8e42615F059dD6e406A6594651A",
+      priceDecimals: 8,
+      isStrictStable: false,
+      fastPricePrecision: 1000,
+      maxCumulativeDeltaDiff: 0.1 * 10 * 1000 * 1000, // 10%
+    },
+    dai: {
+      address: "0x001B3B4d0F3714Ca98ba10F6042DaEbF0B1B7b6F",
+      decimals: 18,
+      priceFeed: "0x0FCAa9c899EC5A91eBc3D5Dd869De833b06fB046",
+      priceDecimals: 8,
+      isStrictStable: true,
+      fastPricePrecision: 1000,
+      maxCumulativeDeltaDiff: 0.1 * 10 * 1000 * 1000, // 10%
+    },
+    nativeToken: {
+      address: "0x9c3C9283D3e44854697Cd22D3Faa240Cfb032889",
+      decimals: 18,
+    }
+  },
   arbitrumTestnet: {
     // https://docs.chain.link/docs/arbitrum-price-feeds/
     btcPriceFeed: { address: "0x0c9973e7a27d00e656B9f153348dA46CaD70d03d" },

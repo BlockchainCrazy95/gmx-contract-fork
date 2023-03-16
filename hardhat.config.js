@@ -25,6 +25,9 @@ const {
   // POLYGON_URL,
   // MAINNET_URL,
   // MAINNET_DEPLOY_KEY
+  MUMBAI_URL,
+  MUMBAI_DEPLOY_KEY,
+  POLYGONSCAN_API_KEY
 } = require("./env.json")
 
 // This is a sample Hardhat task. To learn how to create your own go to
@@ -86,20 +89,27 @@ module.exports = {
     //   chainId: 137,
     //   accounts: [POLYGON_DEPLOY_KEY]
     // },
+    mumbai: {
+      url: MUMBAI_URL,
+      gasPrice: 100000000000,
+      chainId: 80001,
+      accounts: [MUMBAI_DEPLOY_KEY]
+    },
     // mainnet: {
     //   url: MAINNET_URL,
     //   gasPrice: 50000000000,
     //   accounts: [MAINNET_DEPLOY_KEY]
     // },
-    goerli: {
-      url: GOERLI_URL,
-      gasPrice: 50000000000,
-      accounts: [GOERLI_DEPLOY_KEY]
-    }
+    // goerli: {
+    //   url: GOERLI_URL,
+    //   gasPrice: 50000000000,
+    //   accounts: [GOERLI_DEPLOY_KEY]
+    // }
   },
   etherscan: {
     apiKey: {
       goerli: ETHERSCAN_API_KEY,
+      polygonMumbai: POLYGONSCAN_API_KEY
       // arbitrumOne: ARBISCAN_API_KEY,
       // avalanche: SNOWTRACE_API_KEY,
       // bsc: BSCSCAN_API_KEY,

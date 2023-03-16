@@ -1,18 +1,19 @@
-const { getFrameSigner, deployContract, contractAt , sendTxn } = require("../shared/helpers")
+const { getFrameSigner, deployContract, deployContractWithLibrary, contractAt , sendTxn } = require("../shared/helpers")
 const { expandDecimals } = require("../../test/shared/utilities")
 const { toUsd } = require("../../test/shared/units")
 const { errors } = require("../../test/core/Vault/helpers")
 
 const network = (process.env.HARDHAT_NETWORK || 'goerli');
 const tokens = require('./tokens')[network];
+const deployedAddress = require('../deployedAddresses')[network];
 
 const depositFee = 30 // 0.3%
 
 async function getArbValues(signer) {
-  const vault = await contractAt("Vault", "0x489ee077994B6658eAfA855C308275EAd8097C4A", signer)
-  const timelock = await contractAt("Timelock", await vault.gov(), signer)
-  const router = await contractAt("Router", await vault.router(), signer)
-  const shortsTracker = await contractAt("ShortsTracker", "0xf58eEc83Ba28ddd79390B9e90C4d3EbfF1d434da", signer)
+  const vault = await contractAt("Vault", "0x489ee077994B6658eAfA855C308275EAd8097C4A")
+  const timelock = await contractAt("Timelock", await vault.gov())
+  const router = await contractAt("Router", await vault.router())
+  const shortsTracker = await contractAt("ShortsTracker", "0xf58eEc83Ba28ddd79390B9e90C4d3EbfF1d434da")
   const weth = await contractAt("WETH", tokens.nativeToken.address)
   const orderBook = await contractAt("OrderBook", "0x09f77E8A13De9a35a7231028187e9fD5DB8a2ACB")
   const referralStorage = await contractAt("ReferralStorage", "0xe6fab3f0c7199b0d34d7fbe83394fc0e0d06e99d")
@@ -45,9 +46,9 @@ async function getArbValues(signer) {
 
 async function getAvaxValues(signer) {
   const vault = await contractAt("Vault", "0x9ab2De34A33fB459b538c43f251eB825645e8595")
-  const timelock = await contractAt("Timelock", await vault.gov(), signer)
-  const router = await contractAt("Router", await vault.router(), signer)
-  const shortsTracker = await contractAt("ShortsTracker", "0x9234252975484D75Fd05f3e4f7BdbEc61956D73a", signer)
+  const timelock = await contractAt("Timelock", await vault.gov())
+  const router = await contractAt("Router", await vault.router())
+  const shortsTracker = await contractAt("ShortsTracker", "0x9234252975484D75Fd05f3e4f7BdbEc61956D73a")
   const weth = await contractAt("WETH", tokens.nativeToken.address)
   const orderBook = await contractAt("OrderBook", "0x4296e307f108B2f583FF2F7B7270ee7831574Ae5")
   const referralStorage = await contractAt("ReferralStorage", "0x827ed045002ecdabeb6e2b0d1604cf5fc3d322f8")
@@ -65,6 +66,32 @@ async function getAvaxValues(signer) {
   return { vault, timelock, router, shortsTracker, weth, depositFee, orderBook, referralStorage, orderKeepers, liquidators, partnerContracts }
 }
 
+async function getMumbaiValues() {
+  const { VAULT, SHORTS_TRACKER, ORDER_BOOK, REFERRAL_STORAGE, POSITION_MANAGER } = deployedAddress;
+  const positionManagerAddress = POSITION_MANAGER
+  const vault = await contractAt("Vault", VAULT)
+  const timelock = await contractAt("Timelock", await vault.gov())
+  const router = await contractAt("Router", await vault.router())
+  const shortsTracker = await contractAt("ShortsTracker", SHORTS_TRACKER)
+  const weth = await contractAt("WETH", tokens.nativeToken.address)
+
+  const orderBook = await contractAt("OrderBook", ORDER_BOOK)
+
+  const referralStorage = await contractAt("ReferralStorage", REFERRAL_STORAGE)
+
+  const orderKeepers = [
+    { address: "0xEd1973F50129f3735Ffb6650c71474ae868ce6D8" }, // Account 10
+    { address: "0xa8b7EB755181131e68AdDB47837B5D6dE1A8E041" }  // Account 11
+  ]
+  const liquidators = [
+    { address: "0x04a8E7D5CE11361E06a777577E6BCBA58b238Ad4" }  // Account 12
+  ]
+
+  const partnerContracts = []
+
+  return { positionManagerAddress, vault, timelock, router, shortsTracker, weth, depositFee, orderBook, referralStorage, orderKeepers, liquidators, partnerContracts }
+}
+
 async function getValues(signer) {
   if (network === "arbitrum") {
     return getArbValues(signer)
@@ -73,10 +100,14 @@ async function getValues(signer) {
   if (network === "avax") {
     return getAvaxValues(signer)
   }
+
+  if (network === "mumbai") {
+    return getMumbaiValues()
+  }
 }
 
 async function main() {
-  const signer = await getFrameSigner()
+  // const signer = await getFrameSigner()
 
   const {
     positionManagerAddress,
@@ -91,7 +122,9 @@ async function main() {
     orderKeepers,
     liquidators,
     partnerContracts
-  } = await getValues(signer)
+  } = await getValues()
+
+  const { POSITION_UTILS } = deployedAddress
 
   let positionManager
   if (positionManagerAddress) {
@@ -100,7 +133,12 @@ async function main() {
   } else {
     console.log("Deploying new position manager")
     const positionManagerArgs = [vault.address, router.address, shortsTracker.address, weth.address, depositFee, orderBook.address]
-    positionManager = await deployContract("PositionManager", positionManagerArgs)
+    console.log("positionManagerArgs:", positionManagerArgs);
+    positionManager = await deployContractWithLibrary("PositionManager", positionManagerArgs, "PositionManager", {
+      libraries: {
+        PositionUtils: POSITION_UTILS
+      }
+    })
   }
 
   // positionManager only reads from referralStorage so it does not need to be set as a handler of referralStorage

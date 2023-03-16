@@ -15,6 +15,12 @@ async function getAvaxValues() {
   return { tokenManager }
 }
 
+async function getMumbaiValues() {
+  const tokenManager = { address: "0xb13DAE716771285317dAd37DCD22DFa7bC25808E" }
+
+  return { tokenManager }
+}
+
 async function getValues() {
   if (network === "arbitrum") {
     return getArbValues()
@@ -23,12 +29,16 @@ async function getValues() {
   if (network === "avax") {
     return getAvaxValues()
   }
+
+  if (network === "mumbai") {
+    return getMumbaiValues()
+  }
 }
 
 async function main() {
-  const signer = await getFrameSigner()
+  // const signer = await getFrameSigner()
 
-  const admin = "0x49B373D422BdA4C6BfCdd5eC1E48A9a26fdA2F8b"
+  const admin = "0x2cA62Cf3F7D24A31D7125962b55809A61e05560a"
   const buffer = 24 * 60 * 60
 
   const { tokenManager } = await getValues()
@@ -39,14 +49,14 @@ async function main() {
     tokenManager.address
   ], "Timelock")
 
-  const deployedTimelock = await contractAt("PriceFeedTimelock", timelock.address, signer)
+  const deployedTimelock = await contractAt("PriceFeedTimelock", timelock.address)
 
   const signers = [
-    "0x82429089e7c86B7047b793A9E7E7311C93d2b7a6", // coinflipcanada
-    "0xD7941C4Ca57a511F21853Bbc7FBF8149d5eCb398", // G
-    "0xfb481D70f8d987c1AE3ADc90B7046e39eb6Ad64B", // kr
-    "0x99Aa3D1b3259039E8cB4f0B33d0Cfd736e1Bf49E", // quat
-    "0x6091646D0354b03DD1e9697D33A7341d8C93a6F5" // xhiroz
+    "0x3E5Cc534379e3887f42BB4B58d138DAC49d85324", // Account 4
+    "0x484020c219a945aCb104184b026D58651dbF833a", // Account 5
+    "0x57755Cc5A51dA9A70fe87A8a1e13f5d93082b529", // Account 6
+    "0x4cdB4ACF8f801fa6B5D65dF7f59B641DBD143739", // Account 7
+    "0x9d08f124583DaF11E8AAe84fAbB492eb48CFEd53" // Account 8
   ]
 
   for (let i = 0; i < signers.length; i++) {
@@ -55,7 +65,7 @@ async function main() {
   }
 
   const keepers = [
-    "0x5F799f365Fa8A2B60ac0429C48B153cA5a6f0Cf8" // X
+    "0x45A16D04E4771c713844f9AF95Bd1aF6ee845bD1" // Account 9
   ]
 
   for (let i = 0; i < keepers.length; i++) {

@@ -2,17 +2,19 @@ const { deployContract, contractAt, sendTxn, writeTmpAddresses } = require("../s
 
 const network = (process.env.HARDHAT_NETWORK || 'goerli');
 const tokens = require('../core/tokens')[network];
+const deployedAddress = require('../deployedAddresses')[network];
 
 async function main() {
   const { nativeToken } = tokens
+  const { GMX, GLP, GLP_MANAGER, ESGMX } = deployedAddress
 
   const vestingDuration = 365 * 24 * 60 * 60
 
-  const glpManager = await contractAt("GlpManager", "0xe1ae4d4b06A5Fe1fc288f6B4CD72f9F8323B107F")
-  const glp = await contractAt("GLP", "0x01234181085565ed162a948b6a5e88758CD7c7b8")
+  const glpManager = await contractAt("GlpManager", GLP_MANAGER);
+  const glp = await contractAt("GLP", GLP)
 
-  const gmx = await contractAt("GMX", "0x62edc0692BD897D2295872a9FFCac5425011c661");
-  const esGmx = await contractAt("EsGMX", "0xFf1489227BbAAC61a9209A08929E4c2a526DdD17");
+  const gmx = await contractAt("GMX", GMX);
+  const esGmx = await contractAt("EsGMX", ESGMX);
   const bnGmx = await deployContract("MintableBaseToken", ["Bonus GMX", "bnGMX", 0]);
 
   await sendTxn(esGmx.setInPrivateTransferMode(true), "esGmx.setInPrivateTransferMode")
@@ -92,8 +94,8 @@ async function main() {
     gmxVester.address,
     glpVester.address
   ), "rewardRouter.initialize")
-
-  await sendTxn(glpManager.setHandler(rewardRouter.address), "glpManager.setHandler(rewardRouter)")
+/////// here
+  await sendTxn(glpManager.setHandler(rewardRouter.address, true), "glpManager.setHandler(rewardRouter)")
 
   // allow rewardRouter to stake in stakedGmxTracker
   await sendTxn(stakedGmxTracker.setHandler(rewardRouter.address, true), "stakedGmxTracker.setHandler(rewardRouter)")

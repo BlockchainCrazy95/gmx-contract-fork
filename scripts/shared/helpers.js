@@ -3,10 +3,11 @@ const path = require('path')
 const parse = require('csv-parse')
 
 const network = (process.env.HARDHAT_NETWORK || 'goerli');
-
+console.log("network=", network);
 const ARBITRUM = 42161
 const AVALANCHE = 43114
 const GOERLI = 5
+const MUMBAI = 80001
 
 const {
   ARBITRUM_URL,
@@ -14,19 +15,24 @@ const {
   ARBITRUM_DEPLOY_KEY,
   AVAX_DEPLOY_KEY,
   GOERLI_URL,
-  GOERLI_DEPLOY_KEY
+  GOERLI_DEPLOY_KEY,
+  MUMBAI_URL,
+  MUMBAI_DEPLOY_KEY
 } = require("../../env.json")
 
 const providers = {
   goerli: new ethers.providers.JsonRpcProvider(GOERLI_URL),
   arbitrum: new ethers.providers.JsonRpcProvider(ARBITRUM_URL),
-  avax: new ethers.providers.JsonRpcProvider(AVAX_URL)
+  avax: new ethers.providers.JsonRpcProvider(AVAX_URL),
+  mumbai: new ethers.providers.JsonRpcProvider(MUMBAI_URL)
+
 }
 
 const signers = {
   goerli: new ethers.Wallet(GOERLI_DEPLOY_KEY).connect(providers.goerli),
   arbitrum: new ethers.Wallet(ARBITRUM_DEPLOY_KEY).connect(providers.arbitrum),
-  avax: new ethers.Wallet(ARBITRUM_DEPLOY_KEY).connect(providers.avax)
+  avax: new ethers.Wallet(ARBITRUM_DEPLOY_KEY).connect(providers.avax),
+  mumbai: new ethers.Wallet(MUMBAI_DEPLOY_KEY).connect(providers.mumbai)
 }
 
 function sleep(ms) {
@@ -52,6 +58,10 @@ function getChainId(network) {
     return 5
   }
 
+  if (network === "mumbai") {
+    return 80001
+  }
+
   if (network === "arbitrum") {
     return 42161
   }
@@ -66,6 +76,7 @@ function getChainId(network) {
 async function getFrameSigner() {
   try {
     const frame = new ethers.providers.JsonRpcProvider("http://127.0.0.1:1248")
+    // const frame = new ethers.providers.JsonRpcProvider(MUMBAI_URL)
     const signer = frame.getSigner()
     if (getChainId(network) !== await signer.getChainId()) {
       throw new Error("Incorrect frame network")
@@ -102,6 +113,23 @@ async function callWithRetries(func, args, retriesCount = 3) {
   }
 }
 
+async function deployContractWithLibrary(name, args, label, options) {
+  if (!options && typeof label === "object") {
+    label = null
+    options = label
+  }
+  let info = name
+  if (label) { info = name + ":" + label }
+  let contractFactory = await ethers.getContractFactory(name, options)
+  let contract
+  contract = await contractFactory.deploy(...args)
+  const argStr = args.map((i) => `"${i}"`).join(" ")
+  console.info(`Deploying ${info} ${contract.address} ${argStr}`)
+  await contract.deployTransaction.wait()
+  console.info("... Completed!")
+  return contract
+}
+
 async function deployContract(name, args, label, options) {
   if (!options && typeof label === "object") {
     label = null
@@ -110,7 +138,7 @@ async function deployContract(name, args, label, options) {
 
   let info = name
   if (label) { info = name + ":" + label }
-  const contractFactory = await ethers.getContractFactory(name)
+  let contractFactory = await ethers.getContractFactory(name)
   let contract
   if (options) {
     contract = await contractFactory.deploy(...args, options)
@@ -188,12 +216,14 @@ module.exports = {
   ARBITRUM,
   AVALANCHE,
   GOERLI,
+  MUMBAI,
   providers,
   signers,
   readCsv,
   getFrameSigner,
   sendTxn,
   deployContract,
+  deployContractWithLibrary,
   contractAt,
   writeTmpAddresses,
   readTmpAddresses,
